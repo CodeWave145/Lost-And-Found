@@ -88,7 +88,7 @@ function renderItems() {
         emptyMessage.style.display = 'none';
     }
     
-    // Create and append item cards (newest first)
+    // create and add item cards (newest first)
     items.reverse().forEach(item => {
         const card = createItemCard(item);
         itemGallery.appendChild(card);
@@ -124,7 +124,7 @@ itemForm.addEventListener('submit', (e) => {
     items.push(newItem);
     saveItems(items);
     
-    // render updated items
+
     renderItems();
     
     itemForm.reset();
@@ -152,7 +152,7 @@ function showSuccessMessage() {
     
     document.body.appendChild(successMsg);
     
-    // Remove after 3 seconds
+    // remove after 3 seconds
     setTimeout(() => {
         successMsg.style.animation = 'fadeIn 0.3s ease reverse';
         setTimeout(() => successMsg.remove(), 300);
