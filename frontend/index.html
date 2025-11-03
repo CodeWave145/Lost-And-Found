@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost & Found</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <h1>Lost & Found</h1>
+            <div class="nav-right"> 
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+                <span class="sun-icon">☀️</span>
+                <span class="moon-icon">🌙</span>
+                </button>
+                <button id="login" class="login">
+                    Login
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div id="modal-login" class="modal-login">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Login</h2>
+                <button id="close-modal-login" class="close-btn" aria-label="Close modal">&times;</button>
+            </div>
+
+            <form id="login-form">
+                <div class="form-group">
+                            <label for="roll">Roll Number *</label>
+                            <input type="text" id="roll" name="roll">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input type="text" id="phone" name="phone">
+                        </div>
+
+                        <button type="submit" class="btn-primary-login">Login</button>
+                </form>
+        </div>
+    </div>
+
+    <main class="container">
+        <section class="hero-section">
+            <h2>Help reunite people with their belongings</h2>
+            <p>Report lost or found items to help our community</p>
+            <button id="report-btn" class="btn-primary">Report an Item</button>
+        </section>
+
+        <section class="gallery-section">
+            <h2>Recent Items</h2>
+            <div id="item-gallery" class="item-gallery">
+            </div>
+            <p id="empty-message" class="empty-message">No items reported yet. Be the first to help!</p>
+        </section>
+    </main>
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Report an Item</h2>
+                <button id="close-modal" class="close-btn" aria-label="Close modal">&times;</button>
+            </div>
+            
+            <form id="item-form">
+                <div class="form-group">
+                    <label for="item-name">Item Name *</label>
+                    <input type="text" id="item-name" name="itemName" required placeholder="e.g., Blue Backpack">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description *</label>
+                    <textarea id="description" name="description" required placeholder="Provide details about the item..." rows="4"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" name="status" required>
+                        <option value="">Select status...</option>
+                        <option value="lost">Lost</option>
+                        <option value="found">Found</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="contact">Contact Information (Optional)</label>
+                    <input type="text" id="contact" name="contact" placeholder="Phone or email">
+                </div>
+
+                <div class="form-group">
+                    <label for="image">Upload Image (Optional)</label>
+                    <input type="file" id="image" name="image" accept="image/*">
+                </div>
+                <button type="submit" class="btn-primary">Submit Report</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
