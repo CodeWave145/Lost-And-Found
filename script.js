@@ -1,312 +1,123 @@
-const themeToggle = document.getElementById('theme-toggle');
-const reportBtn = document.getElementById('report-btn');
-const modal = document.getElementById('modal');
-const closeModalBtn = document.getElementById('close-modal');/*
-const modalLogin = document.getElementById('modal-login');
-const closeModalLoginBtn = document.getElementById('close-modal-login');
-const loginButton = document.getElementById('login');
-const loginForm = document.getElementById('login-form');*/
-const itemForm = document.getElementById('item-form');
-const itemGallery = document.getElementById('item-gallery');
-const emptyMessage = document.getElementById('empty-message');
-const imageInput = document.getElementById('image');
-/*
-loginButton.addEventListener('click', () => {
-    modalLogin.classList.add('active');
-});
+document.addEventListener('DOMContentLoaded', () => {
+    const reportBtn = document.getElementById('report-btn');
+    const modal = document.getElementById('modal');
+    const closeModal = document.getElementById('close-modal');
+    const itemForm = document.getElementById('item-form');
+    const itemGallery = document.getElementById('item-gallery');
+    const emptyMessage = document.getElementById('empty-message');
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
 
-closeModalLoginBtn.addEventListener('click', () => {
-    modalLogin.classList.remove('active');
-});
+    // for local storage of all items (temporary) (remove later)
+    let items = JSON.parse(localStorage.getItem('lostAndFoundItems')) || [];
 
-modalLogin.addEventListener('click', (e) => {
-    if (e.target === modalLogin) {
-        modalLogin.classList.remove('active');
-    }
-});
-
-loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const roll = document.getElementById('roll').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-
-    if (!roll || !phone) {
-        alert('Please fill in all required fields');
-        return;
-    }
-    console.log('Login attempt with:');
-    console.log('Roll Number:', roll);
-    console.log('Phone Number:', phone);
-    
-    modalLogin.classList.remove('active');
-    loginForm.reset();
-});
-*/
-
-itemForm.addEventListener('submit', async   (e) => {
-    e.preventDefault();
-    const name = document.getElementById('item-name').value.trim();
-    const description = document.getElementById('description').value.trim();
-    const status = document.getElementById('status').value;
-    const contact = document.getElementById('contact').value.trim();
-    const imageInput = document.getElementById('image');
-    
-    if (!name || !description || !status) {
-        alert('Please fill in all required fields');
-        return;
-    }
-    const newItem = {
-        id: Date.now(),
-        name: name,
-        description: description,
-        status: status,
-        contact: contact,
-        timestamp: Date.now(),
-        image : null
+    const saveItems = () => {
+        localStorage.setItem('lostAndFoundItems', JSON.stringify(items));
     };
-    if (imageInput.files && imageInput.files[0]) {
-            const file = imageInput.files[0];
-            
-            // check file size (limit to 1MB to avoid localStorage issues)
-            if (file.size > 1024 * 1024) {
-                alert('Image size must be less than 1MB');
-                return;
-            }
-            
-            try {
-                const base64Image = await fileToBase64(file);
-                newItem.image = base64Image;
-            } catch (error) {
-                console.error('Error processing image:', error);
-                alert('Error processing image. Please try again.');
-                return;
+
+    const renderItems = (filteredItems = items) => {
+        itemGallery.innerHTML = '';
+        if (filteredItems.length === 0) {
+            emptyMessage.style.display = 'block';
+        } else {
+            emptyMessage.style.display = 'none';
+            filteredItems.forEach(item => {
+                const itemCard = `
+                    <div class="item-card" data-id="${item.id}">
+                        <button class="delete-btn" aria-label="Delete item">&times;</button>
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}">` : '<div class="placeholder-image">No Image</div>'}
+                        <div class="item-card-content">
+                            <span class="status-badge status-${item.status}">${item.status}</span>
+                            <h3>${item.name}</h3>
+                            <p>${item.description}</p>
+                            ${item.contact ? `<p><strong>Contact:</strong> ${item.contact}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+                itemGallery.insertAdjacentHTML('beforeend', itemCard);
+            });
+        }
+    };
+
+    // functions to show and hide the popup form
+    const openModal = () => modal.style.display = 'block';
+    const hideModal = () => modal.style.display = 'none';
+
+    const handleFormSubmit = (e) => {
+        e.preventDefault();
+        const formData = new FormData(itemForm);
+        const imageFile = formData.get('image');
+
+        const newItem = {
+            id: Date.now(),
+            name: formData.get('itemName'),
+            description: formData.get('description'),
+            status: formData.get('status'),
+            contact: formData.get('contact'),
+            image: null
+        };
+
+        if (imageFile && imageFile.size > 0) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                newItem.image = event.target.result;
+                items.push(newItem);
+                saveItems();
+                renderItems();
+            };
+            reader.readAsDataURL(imageFile);
+        } else {
+            items.push(newItem);
+            saveItems();
+            renderItems();
+        }
+
+        itemForm.reset();
+        hideModal();
+    };
+
+    // handles the search thingy
+    const handleSearch = (e) => {
+        e.preventDefault();
+        const searchTerm = searchInput.value.toLowerCase();
+        const filteredItems = items.filter(item => 
+            item.name.toLowerCase().includes(searchTerm) || 
+            item.description.toLowerCase().includes(searchTerm)
+        );
+        renderItems(filteredItems);
+    };
+    
+    const handleDelete = (e) => {
+        if (e.target.classList.contains('delete-btn')) {
+            const card = e.target.closest('.item-card');
+            const itemId = Number(card.dataset.id);
+
+            if (confirm('Are you sure you want to delete this item?')) {
+                items = items.filter(item => item.id !== itemId);
+                saveItems();
+                renderItems();
             }
         }
-        
-        // get existing items, add new item, and save
-        const items = getItems();
-        items.push(newItem);
-        saveItems(items);
-        
-        renderItems();
-        
-        itemForm.reset();
-        modal.classList.remove('active');
-        
-        showSuccessMessage();
-    });
-
-// helper function to convert file to base64
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
-// for light and dark themes
-function initializeTheme() {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-    }
-}
-
-// button for dark mode
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-    
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-});
-
-
-reportBtn.addEventListener('click', () => {
-    modal.classList.add('active');
-});
-
-closeModalBtn.addEventListener('click', () => {
-    modal.classList.remove('active');
-});
-
-modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-        modal.classList.remove('active');
-    }
-});
-
-function getItems() {
-    const items = localStorage.getItem('lostFoundItems');
-    return items ? JSON.parse(items) : [];
-}
-
-function saveItems(items) {
-    localStorage.setItem('lostFoundItems', JSON.stringify(items));
-}
-
-function formatDate(timestamp) {
-    const date = new Date(timestamp);
-    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return date.toLocaleDateString('en-US', options);
-}
-/*
-function createItemCard(item) {
-    const card = document.createElement('div');
-    card.className = 'item-card';
-    
-    card.innerHTML = `
-        <div class="item-header">
-            <h3>${escapeHtml(item.name)}</h3>
-            <span class="status-badge ${item.status}">${item.status}</span>
-        </div>
-        <p>${escapeHtml(item.description)}</p>
-        ${item.contact ? `<p class="item-contact">Contact: ${escapeHtml(item.contact)}</p>` : ''}
-        <p class="item-date">Reported: ${formatDate(item.timestamp)}</p>
-    `;
-    
-    return card;
-}
-    DELETE THIS LATER
-*/
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function renderItems() {
-    const items = getItems();
-    
-    itemGallery.innerHTML = '';
-
-    if (items.length === 0) {
-        emptyMessage.style.display = 'block';
-        return;
-    } else {
-        emptyMessage.style.display = 'none';
-    }
-    
-    // create and add item cards (newest first)
-    items.reverse().forEach(item => {
-        const card = createItemCard(item);
-        itemGallery.appendChild(card);
-    });
-}
-/*
-itemForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    // get form values
-    const name = document.getElementById('item-name').value.trim();
-    const description = document.getElementById('description').value.trim();
-    const status = document.getElementById('status').value;
-    const contact = document.getElementById('contact').value.trim();
-    
-    if (!name || !description || !status) {
-        alert('Please fill in all required fields');
-        return;
-    }
-    
-    // create new item object
-    const newItem = {
-        id: Date.now(),
-        name: name,
-        description: description,
-        status: status,
-        contact: contact,
-        timestamp: Date.now()
     };
-    
-    // get existing items, add new item, and save
-    const items = getItems();
-    items.push(newItem);
-    saveItems(items);
-    
 
-    renderItems();
     
-    itemForm.reset();
-    modal.classList.remove('active');
-    
-    showSuccessMessage();
-});
-*/
-function showSuccessMessage() {
-    const successMsg = document.createElement('div');
-    successMsg.textContent = 'Item reported successfully!';
-    successMsg.style.cssText = `
-        position: fixed;
-        top: 100px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--badge-found);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        z-index: 2000;
-        animation: slideUp 0.3s ease;
-    `;
-    
-    document.body.appendChild(successMsg);
-    
-    // remove after 3 seconds
-    setTimeout(() => {
-        successMsg.style.animation = 'fadeIn 0.3s ease reverse';
-        setTimeout(() => successMsg.remove(), 300);
-    }, 3000);
-}
-
-
-// initialize theme and render items on page load
-document.addEventListener('DOMContentLoaded', () => {
-    initializeTheme();
-    renderItems();
-});
-
-function createItemCard(item) {
-    const card = document.createElement('div');
-    card.className = 'item-card';
-    
-    card.innerHTML = `
-        <div class="item-header">
-            <h3>${escapeHtml(item.name)}</h3>
-            <div>
-                <span class="status-badge ${item.status}">${item.status}</span>
-            </div>
-        </div>
-        ${item.image ? `<img src="${item.image}" alt="${escapeHtml(item.name)}" class="item-image">` : ''}
-            
-        <p>${escapeHtml(item.description)}</p>
-        ${item.contact ? `<p class="item-contact">Contact: ${escapeHtml(item.contact)}</p>` : ''}
-        <p class="item-date">Reported: ${formatDate(item.timestamp)}</p>
-        <button class="delete-btn" data-id="${item.id}" style="
-            margin-top: 1rem;
-            background: var(--badge-lost);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        ">Delete</button>
-    `;
-    
-    // add delete functionality
-    const deleteBtn = card.querySelector('.delete-btn');
-    deleteBtn.addEventListener('click', () => {
-        deleteItem(item.id);
+    reportBtn.addEventListener('click', openModal);
+    closeModal.addEventListener('click', hideModal);
+    itemForm.addEventListener('submit', handleFormSubmit);
+    searchForm.addEventListener('submit', handleSearch);
+    itemGallery.addEventListener('click', handleDelete);
+    searchInput.addEventListener('input', () => {
+        // if the search bar is cleared, show all items again
+        if (searchInput.value === '') {
+            renderItems();
+        }
     });
     
-    return card;
-}
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            hideModal();
+        }
+    });
 
-function deleteItem(itemId) {
-    if (confirm('Are you sure you want to delete this item?')) {
-        let items = getItems();
-        items = items.filter(item => item.id !== itemId);
-        saveItems(items);
-        renderItems();
-    }
-}
+    renderItems();
+});

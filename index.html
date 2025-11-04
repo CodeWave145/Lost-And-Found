@@ -11,10 +11,6 @@
         <div class="container header-content">
             <h1>Lost & Found</h1>
             <div class="nav-right"> 
-                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
-                <span class="sun-icon">☀️</span>
-                <span class="moon-icon">🌙</span>
-                </button>
                 <!--<button id="login" class="login">
                     Login
                 </button>-->
@@ -47,9 +43,16 @@
     -->
     <main class="container">
         <section class="hero-section">
-            <h2>Help reunite people with their belongings</h2>
+            <h2>Help reunite people with their belongings!</h2>
             <p>Report lost or found items to help our community</p>
             <button id="report-btn" class="btn-primary">Report an Item</button>
+        </section>
+
+        <section class="search-section">
+            <form id="search-form">
+                <input type="text" id="search-input" placeholder="Search for a lost item..." aria-label="Search for a lost item">
+                <button type="submit" class="btn-primary">Search</button>
+            </form>
         </section>
 
         <section class="gallery-section">
