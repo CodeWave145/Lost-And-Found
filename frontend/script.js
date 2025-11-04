@@ -1,15 +1,16 @@
 const themeToggle = document.getElementById('theme-toggle');
 const reportBtn = document.getElementById('report-btn');
 const modal = document.getElementById('modal');
-const closeModalBtn = document.getElementById('close-modal');
+const closeModalBtn = document.getElementById('close-modal');/*
 const modalLogin = document.getElementById('modal-login');
 const closeModalLoginBtn = document.getElementById('close-modal-login');
-const loginForm = document.getElementById('login-form');
+const loginButton = document.getElementById('login');
+const loginForm = document.getElementById('login-form');*/
 const itemForm = document.getElementById('item-form');
 const itemGallery = document.getElementById('item-gallery');
 const emptyMessage = document.getElementById('empty-message');
-const loginButton = document.getElementById('login');
-
+const imageInput = document.getElementById('image');
+/*
 loginButton.addEventListener('click', () => {
     modalLogin.classList.add('active');
 });
@@ -40,7 +41,70 @@ loginForm.addEventListener('submit', (e) => {
     modalLogin.classList.remove('active');
     loginForm.reset();
 });
+*/
 
+itemForm.addEventListener('submit', async   (e) => {
+    e.preventDefault();
+    const name = document.getElementById('item-name').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const status = document.getElementById('status').value;
+    const contact = document.getElementById('contact').value.trim();
+    const imageInput = document.getElementById('image');
+    
+    if (!name || !description || !status) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    const newItem = {
+        id: Date.now(),
+        name: name,
+        description: description,
+        status: status,
+        contact: contact,
+        timestamp: Date.now(),
+        image : null
+    };
+    if (imageInput.files && imageInput.files[0]) {
+            const file = imageInput.files[0];
+            
+            // check file size (limit to 1MB to avoid localStorage issues)
+            if (file.size > 1024 * 1024) {
+                alert('Image size must be less than 1MB');
+                return;
+            }
+            
+            try {
+                const base64Image = await fileToBase64(file);
+                newItem.image = base64Image;
+            } catch (error) {
+                console.error('Error processing image:', error);
+                alert('Error processing image. Please try again.');
+                return;
+            }
+        }
+        
+        // get existing items, add new item, and save
+        const items = getItems();
+        items.push(newItem);
+        saveItems(items);
+        
+        renderItems();
+        
+        itemForm.reset();
+        modal.classList.remove('active');
+        
+        showSuccessMessage();
+    });
+
+// helper function to convert file to base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
 // for light and dark themes
 function initializeTheme() {
     const savedTheme = localStorage.getItem('theme');
@@ -86,7 +150,7 @@ function formatDate(timestamp) {
     const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
     return date.toLocaleDateString('en-US', options);
 }
-
+/*
 function createItemCard(item) {
     const card = document.createElement('div');
     card.className = 'item-card';
@@ -103,7 +167,8 @@ function createItemCard(item) {
     
     return card;
 }
-
+    DELETE THIS LATER
+*/
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -128,7 +193,7 @@ function renderItems() {
         itemGallery.appendChild(card);
     });
 }
-
+/*
 itemForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
@@ -166,7 +231,7 @@ itemForm.addEventListener('submit', (e) => {
     
     showSuccessMessage();
 });
-
+*/
 function showSuccessMessage() {
     const successMsg = document.createElement('div');
     successMsg.textContent = 'Item reported successfully!';
@@ -211,6 +276,8 @@ function createItemCard(item) {
                 <span class="status-badge ${item.status}">${item.status}</span>
             </div>
         </div>
+        ${item.image ? `<img src="${item.image}" alt="${escapeHtml(item.name)}" class="item-image">` : ''}
+            
         <p>${escapeHtml(item.description)}</p>
         ${item.contact ? `<p class="item-contact">Contact: ${escapeHtml(item.contact)}</p>` : ''}
         <p class="item-date">Reported: ${formatDate(item.timestamp)}</p>
