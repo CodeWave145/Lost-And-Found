@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const API_BASE = '/api';
+    const REPORTS_ENDPOINT = `${API_BASE}/reports`;
+
     const reportBtn = document.getElementById('report-btn');
     const modal = document.getElementById('modal');
     const closeModal = document.getElementById('close-modal');
@@ -8,36 +11,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-input');
 
-    let items = JSON.parse(localStorage.getItem('lostAndFoundItems')) || [];
-
-    // Backfill older entries missing new fields
-    items = items.map(it => ({
-        ...it,
-        location: typeof it.location === 'string' ? it.location : '',
-        createdAt: it.createdAt || (typeof it.id === 'number'
-            ? new Date(it.id).toISOString()
-            : new Date().toISOString()),
-        contact: (typeof it.contact === 'string' && it.contact.trim() !== '')
-            ? it.contact
-            : '(missing)'
-    }));
-
-    const saveItems = () => {
-        localStorage.setItem('lostAndFoundItems', JSON.stringify(items));
-    };
+    let items = [];
 
     const escapeHTML = (str = '') =>
-        str.replace(/[&<>"']/g, c => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
+        String(str).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[c]));
 
-    const formatDisplayDate = iso => {
-        const d = new Date(iso);
+    const formatDisplayDate = dt => {
+        const d = new Date(dt);
+        if (isNaN(d)) return '';
         return d.toLocaleString(undefined, {
+            year: 'numeric',
             month: 'short',
             day: '2-digit',
             hour: '2-digit',
@@ -45,20 +30,66 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const renderItems = (filteredItems = items) => {
+    // API helpers
+    async function fetchReports() {
+        const res = await fetch(REPORTS_ENDPOINT, { credentials: 'include' });
+        if (!res.ok) throw new Error(`Failed to load reports: ${res.status}`);
+        const data = await res.json();
+        const rows = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+        items = rows.map(r => ({
+            id: r.reportid,
+            name: r.itemname,
+            description: r.description,
+            location: r.location || '',
+            status: Number(r.isFound) === 1 ? 'found' : 'lost',
+            contact: r.contact || '',
+            imageUrl: r.imgurl || null,
+            createdAt: r.reportdate
+        }));
+        renderItems(items);
+    }
+
+    async function createReport(payload) {
+        const res = await fetch(REPORTS_ENDPOINT, {
+            method: 'POST',
+            body: payload,
+            credentials: 'include'
+        });
+        if (!res.ok) {
+            const msg = await safeText(res);
+            throw new Error(`Failed to create report: ${res.status} ${msg}`);
+        }
+        return res.json();
+    }
+
+    async function deleteReport(id) {
+        const res = await fetch(`${REPORTS_ENDPOINT}/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        if (!res.ok) {
+            const msg = await safeText(res);
+            throw new Error(`Failed to delete report: ${res.status} ${msg}`);
+        }
+    }
+
+    async function safeText(res) {
+        try { return await res.text(); } catch { return ''; }
+    }
+
+    // rendering
+    function renderItems(list) {
         itemGallery.innerHTML = '';
-        if (filteredItems.length === 0) {
+        if (!list || list.length === 0) {
             emptyMessage.style.display = 'block';
             return;
         }
         emptyMessage.style.display = 'none';
 
-        filteredItems.forEach(item => {
-            const iso = item.createdAt || new Date().toISOString();
-            const displayDate = formatDisplayDate(iso);
-
-            const imageMarkup = item.image
-                ? `<img src="${item.image}" alt="${escapeHTML(item.name)}">`
+        list.forEach(item => {
+            const displayDate = formatDisplayDate(item.createdAt);
+            const imageMarkup = item.imageUrl
+                ? `<img src="${escapeHTML(item.imageUrl)}" alt="${escapeHTML(item.name)}">`
                 : '<div class="placeholder-image">No Image</div>';
 
             const locationLine = item.location
@@ -69,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const card = `
                 <div class="item-card" data-id="${item.id}">
-                    <span class="item-date" title="${iso}">${displayDate}</span>
+                    <span class="item-date" title="${escapeHTML(item.createdAt || '')}">${escapeHTML(displayDate)}</span>
                     <button class="delete-btn" aria-label="Delete item">&times;</button>
                     ${imageMarkup}
                     <div class="item-card-content">
@@ -83,8 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             itemGallery.insertAdjacentHTML('beforeend', card);
         });
-    };
+    }
 
+    // modal controls
     const openModal = () => {
         modal.style.display = 'block';
         modal.setAttribute('aria-hidden', 'false');
@@ -95,22 +127,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const hideModal = () => {
         modal.style.display = 'none';
         modal.setAttribute('aria-hidden', 'true');
+        itemForm.reset();
     };
 
-    const showFieldError = (el, message) => {
+    // handlers
+    function showFieldError(el, message) {
         alert(message);
-        el.focus();
-    };
+        el?.focus();
+    }
 
-    const handleFormSubmit = e => {
+    async function onSubmit(e) {
         e.preventDefault();
         const formData = new FormData(itemForm);
 
-        const name = formData.get('itemName').trim();
-        const description = formData.get('description').trim();
-        const location = formData.get('location').trim();
-        const status = formData.get('status');
-        const contact = formData.get('contact').trim();
+        const name = (formData.get('itemName') || '').toString().trim();
+        const description = (formData.get('description') || '').toString().trim();
+        const location = (formData.get('location') || '').toString().trim();
+        const status = (formData.get('status') || '').toString();
+        const contact = (formData.get('contact') || '').toString().trim();
         const imageFile = formData.get('image');
 
         if (!name) return showFieldError(document.getElementById('item-name'), 'Item name is required.');
@@ -119,73 +153,70 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!status) return showFieldError(document.getElementById('status'), 'Status is required.');
         if (!contact) return showFieldError(document.getElementById('contact'), 'Contact is required.');
 
-        const newItem = {
-            id: Date.now(),
-            createdAt: new Date().toISOString(),
-            name,
-            description,
-            location,
-            status,
-            contact,
-            image: null
-        };
-
-        const finalizeAdd = () => {
-            items.push(newItem);
-            saveItems();
-            renderItems();
-            itemForm.reset();
-            hideModal();
-        };
-
-        if (imageFile && imageFile.size > 0) {
-            const reader = new FileReader();
-            reader.onload = evt => {
-                newItem.image = evt.target.result;
-                finalizeAdd();
-            };
-            reader.readAsDataURL(imageFile);
-        } else {
-            finalizeAdd();
+        const payload = new FormData();
+        payload.set('itemname', name);
+        payload.set('description', description);
+        payload.set('location', location);
+        payload.set('isFound', status === 'found' ? '1' : '0');
+        payload.set('contact', contact);
+        if (imageFile && imageFile instanceof File && imageFile.size > 0) {
+            payload.set('image', imageFile);
         }
-    };
 
-    const handleSearch = e => {
+        try {
+            await createReport(payload);
+            hideModal();
+            await fetchReports();
+        } catch (err) {
+            console.error(err);
+            alert(err.message || 'Failed to submit report.');
+        }
+    }
+
+    async function onDeleteClick(e) {
+        if (!e.target.classList.contains('delete-btn')) return;
+        const card = e.target.closest('.item-card');
+        const id = card?.dataset?.id;
+        if (!id) return;
+        if (!confirm('Are you sure you want to delete this item?')) return;
+        try {
+            await deleteReport(id);
+            await fetchReports();
+        } catch (err) {
+            console.error(err);
+            alert(err.message || 'Failed to delete report.');
+        }
+    }
+
+    function onSearch(e) {
         e.preventDefault();
-        const term = searchInput.value.toLowerCase();
+        const term = (searchInput.value || '').toLowerCase();
         const filtered = items.filter(item =>
-            item.name.toLowerCase().includes(term) ||
-            item.description.toLowerCase().includes(term) ||
-            item.location.toLowerCase().includes(term) ||
+            (item.name || '').toLowerCase().includes(term) ||
+            (item.description || '').toLowerCase().includes(term) ||
+            (item.location || '').toLowerCase().includes(term) ||
             (item.contact || '').toLowerCase().includes(term)
         );
         renderItems(filtered);
-    };
+    }
 
-    const handleDelete = e => {
-        if (!e.target.classList.contains('delete-btn')) return;
-        const card = e.target.closest('.item-card');
-        const id = Number(card.dataset.id);
-        if (confirm('Are you sure you want to delete this item?')) {
-            items = items.filter(it => it.id !== id);
-            saveItems();
-            renderItems();
-        }
-    };
-
-    searchInput.addEventListener('input', () => {
-        if (searchInput.value === '') renderItems();
-    });
-
+    // event listeners
     reportBtn.addEventListener('click', openModal);
     closeModal.addEventListener('click', hideModal);
-    itemForm.addEventListener('submit', handleFormSubmit);
-    searchForm.addEventListener('submit', handleSearch);
-    itemGallery.addEventListener('click', handleDelete);
-
+    itemForm.addEventListener('submit', onSubmit);
+    searchForm.addEventListener('submit', onSearch);
+    itemGallery.addEventListener('click', onDeleteClick);
+    searchInput.addEventListener('input', () => {
+        if (searchInput.value === '') renderItems(items);
+    });
     window.addEventListener('click', e => {
         if (e.target === modal) hideModal();
     });
 
-    renderItems();
+    // initial load
+    fetchReports().catch(err => {
+        console.error(err);
+        emptyMessage.textContent = 'Failed to load items. Please try again.';
+        emptyMessage.style.display = 'block';
+    });
 });

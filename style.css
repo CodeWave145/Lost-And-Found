@@ -8,7 +8,7 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
-/* Theme variables */
+/* for the pink and black theme */
 :root {
     --background-color: #121212;
     --text-color: #f1f1f1;
@@ -263,11 +263,10 @@ header {
     color: #d4edda;
 }
 
-/* Date stamp (no emoji) */
 .item-date {
     position: absolute;
     top: 15px;
-    right: 55px; /* space for delete button */
+    right: 55px;
     font-size: 0.7rem;
     font-weight: 500;
     letter-spacing: 0.06em;
@@ -395,7 +394,6 @@ header {
     resize: vertical;
 }
 
-/* Required field invalid UI feedback */
 input:required:invalid,
 textarea:required:invalid,
 select:required:invalid {
@@ -408,7 +406,6 @@ select:required:invalid:focus {
     box-shadow: 0 0 0 3px rgba(160, 68, 68, 0.4);
 }
 
-/* Animations */
 @keyframes fadeIn {
     from {opacity: 0;}
     to {opacity: 1;}
@@ -419,7 +416,6 @@ select:required:invalid:focus {
     to {transform: translateY(0);}
 }
 
-/* Responsive tweaks */
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;
