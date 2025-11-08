@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const API_BASE = '/api';
-    const REPORTS_ENDPOINT = `${API_BASE}/reports`;
+    const API_BASE = 'http://127.0.0.1:5000/api';
+    const REPORTS_ENDPOINT = `${API_BASE}/report`;
+    const REPORTS_GET_ENDPOINT = `${API_BASE}/reports`;
 
     const reportBtn = document.getElementById('report-btn');
     const modal = document.getElementById('modal');
@@ -32,16 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // API helpers
     async function fetchReports() {
-        const res = await fetch(REPORTS_ENDPOINT, { credentials: 'include' });
+        const res = await fetch(REPORTS_GET_ENDPOINT);
         if (!res.ok) throw new Error(`Failed to load reports: ${res.status}`);
         const data = await res.json();
         const rows = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
         items = rows.map(r => ({
-            id: r.reportid,
+            id: r.id,
             name: r.itemname,
             description: r.description,
             location: r.location || '',
-            status: Number(r.isFound) === 1 ? 'found' : 'lost',
+            status: r.status,
             contact: r.contact || '',
             imageUrl: r.imgurl || null,
             createdAt: r.reportdate
@@ -49,23 +50,22 @@ document.addEventListener('DOMContentLoaded', () => {
         renderItems(items);
     }
 
+    
     async function createReport(payload) {
-        const res = await fetch(REPORTS_ENDPOINT, {
-            method: 'POST',
-            body: payload,
-            credentials: 'include'
+     const res = await fetch(REPORTS_ENDPOINT, {
+        method: 'POST',
+        body: payload,
         });
         if (!res.ok) {
-            const msg = await safeText(res);
-            throw new Error(`Failed to create report: ${res.status} ${msg}`);
-        }
-        return res.json();
-    }
 
+        const msg = await safeText(res.clone()); 
+        throw new Error(`Failed to create report: ${res.status} ${msg}`);
+        }
+        return res.json(); 
+    }
     async function deleteReport(id) {
         const res = await fetch(`${REPORTS_ENDPOINT}/${encodeURIComponent(id)}`, {
             method: 'DELETE',
-            credentials: 'include'
         });
         if (!res.ok) {
             const msg = await safeText(res);
@@ -117,17 +117,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // modal controls
+    const hideModal = () => {
+        const activeElement = document.activeElement;
+        if (modal.contains(activeElement)) {
+            activeElement.blur();
+            reportBtn.focus();
+        }
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        modal.setAttribute('inert', 'true');  
+        itemForm.reset();
+    };
+
     const openModal = () => {
         modal.style.display = 'block';
         modal.setAttribute('aria-hidden', 'false');
+        modal.removeAttribute('inert');  
         const firstInput = itemForm.querySelector('input, textarea, select');
         if (firstInput) firstInput.focus();
-    };
-
-    const hideModal = () => {
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        itemForm.reset();
     };
 
     // handlers
@@ -176,8 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function onDeleteClick(e) {
         if (!e.target.classList.contains('delete-btn')) return;
         const card = e.target.closest('.item-card');
-        const id = card?.dataset?.id;
-        if (!id) return;
+        const id = card ? card.dataset.id : null;
+        if (!id || id === 'undefined'){
+            console.error('Error: Could not retrieve a valid report ID for deletion.', card);
+            alert('Failed to identify the report for deletion. Please try refreshing.');
+            return;
+        }
         if (!confirm('Are you sure you want to delete this item?')) return;
         try {
             await deleteReport(id);
@@ -208,6 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
     itemGallery.addEventListener('click', onDeleteClick);
     searchInput.addEventListener('input', () => {
         if (searchInput.value === '') renderItems(items);
+        else
+            onSearch({ preventDefault: () => {} });
     });
     window.addEventListener('click', e => {
         if (e.target === modal) hideModal();
