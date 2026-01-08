@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lost & Found</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <h1>Lost & Found</h1>
+            <div class="nav-right">
+                <span class="watermark">created by E2 & F2</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero-section">
+            <h2>Help reunite people with their belongings!</h2>
+            <button id="report-btn" class="btn-primary">Report an Item</button>
+        </section>
+
+        <section class="search-section">
+            <form id="search-form">
+                <input type="text" id="search-input" placeholder="Search for a lost item..." />
+                <button type="submit" class="btn-primary">Search</button>
+            </form>
+        </section>
+
+        <section class="gallery-section">
+            <h2>Recent Items</h2>
+            <div id="item-gallery" class="item-gallery"></div>
+            <p id="empty-message" class="empty-message">No items reported yet.</p>
+        </section>
+    </main>
+
+    <div id="modal" class="modal" style="display: none;" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Report an Item</h2>
+                <button id="close-modal" class="close-btn">&times;</button>
+            </div>
+            <form id="item-form">
+                <div class="form-group">
+                    <label>Item Name *</label>
+                    <input type="text" name="itemName" required placeholder="e.g., Blue Backpack"/>
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea name="description" required placeholder="Provide details about the item..." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Location *</label>
+                    <input type="text" name="location" required placeholder="e.g., Library lobby"/>
+                </div>
+                <div class="form-group">
+                    <label>Status *</label>
+                    <select name="status" required>
+                        <option value="">Select status...</option>
+                        <option value="lost">Lost</option>
+                        <option value="found">Found</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Contact *</label>
+                    <input type="text" name="contact" required placeholder="e.g., +123456789 or name@example.com"/>
+                </div>
+                <div class="form-group">
+                    <label>Upload Image (Optional)</label>
+                    <input type="file" id="image-input" accept="image/*" />
+                </div>
+                <button type="submit" id="submit-btn" class="btn-primary">Submit Report</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
